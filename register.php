@@ -45,52 +45,53 @@ $access = new access($dbhost, $dbuser, $dbpass, $dbname);
 $access->connect();
 
 // STEP 3. Check availability of the login / user information
-$user = $access->selectUser($email, $userName);
+$userEmail = $access->selectUserWithEmail($email);
 
 // found user with the same Email address
-if (!empty($user)) {
+if (!empty($userEmail)) {
 
     // throw back JSON to user
     $return['status'] = '400';
-    $return['message'] = 'The Email or Username is already registered';
-    echo json_encode($return);
-
-    // disconnect from the server and stop executing of current PHP
-    $access->disconnect();
-    return;
+    $return['message'] = 'The Email is already registered. (Girdiğiniz email ile daha önceden kayıt olunmuştur.)';
 } else {
 
+    $user_userName = $access->selectUserWithUserName($userName);
 
-    // STEP 4. Send request to Insert the data in the server
-    $result = $access->registertUser($email, $secured_password, $salt, $userName,  $fullName);
+    if (!empty($user_userName)) {
 
-    // result is positive - inserted
-    if ($result) {
-
-        // select currently inserted user
-        $user = $access->selectUser($email, $userName);
-
-        // throw back the user details
-        $return['status'] = '200';
-        $return['message'] = 'Successfully registered';
-        $return['id'] = $user['id'];
-        $return['email'] = $email;
-        $return['userName'] = $userName;
-        $return['fullName'] = $fullName;
-        $return['ava'] = $user['ava'];
-        echo json_encode($return);
-
-        $access->disconnect();
-        return;
-
-        // result is negative - couldn't insert
+        // throw back JSON to user
+        $return['status'] = '400';
+        $return['message'] = "This Username is already used. Could you please try another one.\r\n(Girdiğiniz kullanıcı adı daha önceden kullanılmıştır. Lütfen başka bir kullanıcı adı deneyiniz.)";
     } else {
 
-        $return['status'] = '400';
-        $return['message'] = 'Could not insert information';
-        echo json_encode($return);
+        // STEP 4. Send request to Insert the data in the server
+        $result = $access->registertUser($email, $secured_password, $salt, $userName,  $fullName);
 
-        $access->disconnect();
-        return;
+        // result is positive - inserted
+        if ($result) {
+
+            // select currently inserted user
+            $user = $access->selectUserWithEmail($email);
+
+            // throw back the user details
+            $return['status'] = '200';
+            $return['message'] = 'Successfully registered';
+            $return['id'] = $user['id'];
+            $return['email'] = $email;
+            $return['userName'] = $userName;
+            $return['fullName'] = $fullName;
+            $return['cover'] = $user['cover'];
+            $return['ava'] = $user['ava'];
+            $return['bio'] = $user['bio'];
+
+            // result is negative - couldn't insert
+        } else {
+
+            $return['status'] = '400';
+            $return['message'] = 'Could not insert information';
+        }
     }
 }
+
+echo json_encode($return);
+$access->disconnect();

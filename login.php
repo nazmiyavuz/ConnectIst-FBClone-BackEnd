@@ -54,7 +54,9 @@ if ($user) {
         $return['email'] = $user['email'];
         $return['userName'] = $user['userName'];
         $return['fullName'] = $user['fullName'];
+        $return['cover'] = $user['cover'];
         $return['ava'] = $user['ava'];
+        $return['bio'] = $user['bio'];
 
 
         // encyrpted password and salt do not match what user is entering as password
