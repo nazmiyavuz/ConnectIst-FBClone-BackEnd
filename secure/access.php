@@ -251,4 +251,239 @@ class access
         // returning result of exec
         return $result;
     }
+
+    // inserting post into table/database
+    function insertPost($user_id, $text, $picture)
+    {
+
+        // sql statement to be ran
+        $sql = 'INSERT INTO posts SET user_id=?, text=?, picture=?';
+
+        // preparing SQL command for execution
+        $statement = $this->conn->prepare($sql);
+
+        // show error if statement couldn't be executed.
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        // replacing ? with the variables
+        $statement->bind_param('iss', $user_id, $text, $picture);
+
+        // execute statement and keep the result in $result variable
+        $result = $statement->execute();
+
+        return $result;
+    }
+
+    // responsible of updating user related information
+    public function updateUser($email, $userName, $fullName, $id)
+    {
+        // sql statement to be ran
+        $sql = 'UPDATE users SET email=?, userName=?, fullName=? WHERE id=?';
+
+        // preparing SQL command for execution
+        $statement = $this->conn->prepare($sql);
+
+        // checking sql command
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        // assigning values / replacing ? with the variables
+        $statement->bind_param('sssi', $email, $userName, $fullName, $id);
+
+        // execute statement and keep the result in $result variable
+        $result = $statement->execute();
+
+        // return the result of final execution.
+        return $result;
+    }
+
+    // responsible of updating user password
+    public function updatePassword($id, $password, $salt)
+    {
+        // sql statement to be ran
+        $sql = 'UPDATE users SET password=?, salt=? WHERE id=?';
+
+        // preparing SQL command for execution
+        $statement = $this->conn->prepare($sql);
+
+        // checking sql command
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        // assigning values / replacing ? with the variables
+        $statement->bind_param('ssi', $password, $salt, $id);
+
+        // execute statement and keep the result in $result variable
+        $result = $statement->execute();
+
+        // return the result of final execution.
+        return $result;
+    }
+
+    public function selectPosts($id, $offset, $limit)
+    {
+        // array to store information or posts
+        $return = array();
+
+        // sql statement to be executed
+        $sql = "SELECT 
+        posts.id, 
+        posts.user_id, 
+        posts.text, 
+        posts.picture, 
+        posts.date_created, 
+        users.fullName, 
+        users.cover, 
+        users.ava, 
+        likes.post_id AS liked 
+        FROM posts 
+        LEFT JOIN users ON users.id = posts.user_id 
+        LEFT JOIN likes ON posts.id = likes.post_id 
+        WHERE posts.user_id = $id 
+        ORDER BY posts.date_created DESC LIMIT $limit OFFSET $offset";
+
+        // preparing sql command to be executed and then we stor ethe result of preparation in statement var.
+        $statement = $this->conn->prepare($sql);
+
+        // show error occurred while preparing the sql command for execution
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        // execute sql command
+        $statement->execute();
+
+        // retreive results from the query / sql
+        $result = $statement->get_result();
+
+        // all rows (posts) are stored in result. We are fetching every row one by one. and assigning it to $return var.
+        while ($row = $result->fetch_assoc()) {
+            $return[] = $row;
+        }
+
+        return $return;
+    }
+
+    // inserting like-information into the database
+    public function insertLike($post_id, $user_id)
+    {
+        // sql statement to be ran
+        $sql = 'INSERT INTO likes SET post_id=?, user_id=?';
+
+        // preparing SQL command for execution
+        $statement = $this->conn->prepare($sql);
+
+        // checking is statement having an errors
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        // assigning values / replacing ? with the variables
+        $statement->bind_param('ii', $post_id, $user_id);
+
+        // execute statement and keep the result in $result variable
+        $result = $statement->execute();
+
+        // return the result of final execution.
+        return $result;
+    }
+
+
+    // inserting like-information into the database
+    public function deleteLike($post_id, $user_id)
+    {
+        // sql statement to be ran
+        $sql = 'DELETE FROM likes WHERE post_id=? AND user_id=?';
+
+        // preparing SQL command for execution
+        $statement = $this->conn->prepare($sql);
+
+        // checking is statement having an errors
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        // assigning values / replacing ? with the variables
+        $statement->bind_param('ii', $post_id, $user_id);
+
+        // execute statement and keep the result in $result variable
+        $result = $statement->execute();
+
+        // return the result of final execution.
+        return $result;
+    }
+
+    // insert comment into db
+    public function insertComment($post_id, $user_id, $comment)
+    {
+
+        // sql comment to be execuited 
+        $sql = 'INSERT INTO comments SET post_id=?, user_id=?, comment=?';
+
+        // preparing SQL command for execution
+        $statement = $this->conn->prepare($sql);
+
+        // checking is statement having an errors
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        // assigning values / replacing ? with the variables
+        $statement->bind_param('iis', $post_id, $user_id, $comment);
+
+        // execute statement and keep the result in $result variable
+        $result = $statement->execute();
+
+        // return back to the user the result we got
+        return $result;
+    }
+
+    // select all comments related to the certain post
+    public function selectComments($post_id, $limit, $offset)
+    {
+        // array to store information or posts
+        $return = array();
+
+        // sql statement to be executed
+        $sql = "SELECT 
+                    comments.id, 
+                    comments.post_id, 
+                    comments.user_id, 
+                    comments.comment, 
+                    comments.date_created, 
+                    posts.text, 
+                    posts.picture, 
+                    users.fullName, 
+                    users.ava 
+                    FROM comments 
+                    LEFT JOIN posts ON posts.id = comments.post_id 
+                    LEFT JOIN users ON users.id = comments.user_id 
+                    WHERE post_id = $post_id 
+                    ORDER BY comments.date_created DESC LIMIT $limit OFFSET $offset";
+
+        // preparing sql command to be executed and then we stor ethe result of preparation in statement var.
+        $statement = $this->conn->prepare($sql);
+
+        // show error occurred while preparing the sql command for execution
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        // execute sql command
+        $statement->execute();
+
+        // retreive results from the query / sql and asigning it to $result
+        $result = $statement->get_result();
+
+        // all rows (posts) are stored in result. We are fetching every row one by one. and assigning it to $return var.
+        while ($row = $result->fetch_assoc()) {
+            $return[] = $row;
+        }
+
+        return $return;
+    }
 }

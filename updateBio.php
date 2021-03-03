@@ -2,7 +2,7 @@
 
 // this protocol is in charge of updating the Bio of the user and throving back to user related information
 
-// STEP !. Check passed inf to this PHP file
+// STEP 1. Check passed inf to this PHP file
 
 if (empty($_REQUEST['id']) || empty($_REQUEST['bio'])) {
     $return['status'] = '400';
