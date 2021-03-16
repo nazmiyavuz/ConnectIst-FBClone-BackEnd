@@ -417,30 +417,89 @@ class access
         return $result;
     }
 
-    // insert comment into db
+    // // insert comment into db
+    // public function insertComment($post_id, $user_id, $comment)
+    // {
+
+    //     // sql comment to be execuited 
+    //     $sql = 'INSERT INTO comments SET post_id=?, user_id=?, comment=?';
+
+    //     // preparing SQL command for execution
+    //     $statement = $this->conn->prepare($sql);
+
+    //     // checking is statement having an errors
+    //     if (!$statement) {
+    //         throw new Exception($statement->error);
+    //     }
+
+    //     // assigning values / replacing ? with the variables
+    //     $statement->bind_param('iis', $post_id, $user_id, $comment);
+
+    //     // execute statement and keep the result in $result variable
+    //     $result = $statement->execute();
+
+    //     // return back to the user the result we got
+    //     return $result;
+    // }
+
+
+    // Will try to select any value in database based on received Email
     public function insertComment($post_id, $user_id, $comment)
     {
 
         // sql comment to be execuited 
         $sql = 'INSERT INTO comments SET post_id=?, user_id=?, comment=?';
 
-        // preparing SQL command for execution
+        // preparing SQL for execution by checking the validity
         $statement = $this->conn->prepare($sql);
 
-        // checking is statement having an errors
+        // if error
         if (!$statement) {
             throw new Exception($statement->error);
         }
 
-        // assigning values / replacing ? with the variables
+        // assigning a variables instead of '?', after checking the preparation and validty of the SQL command
         $statement->bind_param('iis', $post_id, $user_id, $comment);
 
-        // execute statement and keep the result in $result variable
+        // $result will store the status / result of the execution of SQL command
         $result = $statement->execute();
 
-        // return back to the user the result we got
+
         return $result;
     }
+
+    // Will try to select any value in database based on received Email
+    public function selectCommentWithId($id)
+    {
+
+        // array to store full user related information with the logic: Key=>Value (Name=>John)
+        $returnArray = array();
+
+        // SQL Language / Commande to be sent to the server
+        // SELECT * FROM users WHERE email='john@yahoo.com'
+        $sql = "SELECT * FROM comments WHERE id='" . $id . "'";
+
+        // execuring query via already established connection with the server
+        $result = $this->conn->query($sql);
+
+        // result isn't zero and it has at least 1 row / value / result
+        if ($result != null && (mysqli_num_rows($result)) >= 1) {
+
+            // converting to be a JSON type
+            $row = $result->fetch_array(MYSQLI_ASSOC);
+
+            // assign fetched row to ReturnArray
+            if (!empty($row)) {
+                $returnArray = $row;
+            }
+        }
+
+        // throw back returnArray
+        return $returnArray;
+    }
+
+
+
 
     // select all comments related to the certain post
     public function selectComments($post_id, $limit, $offset)
@@ -463,7 +522,7 @@ class access
                     LEFT JOIN posts ON posts.id = comments.post_id 
                     LEFT JOIN users ON users.id = comments.user_id 
                     WHERE post_id = $post_id 
-                    ORDER BY comments.date_created DESC LIMIT $limit OFFSET $offset";
+                    ORDER BY comments.date_created ASC LIMIT $limit OFFSET $offset";
 
         // preparing sql command to be executed and then we stor ethe result of preparation in statement var.
         $statement = $this->conn->prepare($sql);
@@ -485,5 +544,239 @@ class access
         }
 
         return $return;
+    }
+
+    // deletes certain comment based on comment's id
+    function deleteComment($id)
+    {
+
+        // sql command
+        $sql = 'DELETE FROM comments WHERE id=?';
+
+        // preparing SQL command for execution
+        $statement = $this->conn->prepare($sql);
+
+        // checking is statement having an errors
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        // replace ? with the param
+        $statement->bind_param('i', $id);
+
+        // execute statement and keep the result in $result variable
+        $result = $statement->execute();
+
+        // return back to the user the result we got
+        return $result;
+    }
+
+    // deleting post and all post related information: comments and likes
+    function deletePost($id)
+    {
+
+        // full sql command
+        $sql = "DELETE FROM posts WHERE id='" . $id . "'; "; // DELETE FROM posts WHERE id='1'
+        $sql .= "DELETE FROM likes WHERE post_id='" . $id . "'; "; // DELETE FROM posts WHERE id='1'; DELETE FROM likes WHERE post_id='1'
+        $sql .= "DELETE FROM comments WHERE post_id='" . $id . "'; "; // DELETE FROM posts WHERE id='1'; DELETE FROM likes WHERE post_id='1'; DELETE FROM comments WHERE post_id='1'
+
+        // execute several sql commands
+        $this->conn->multi_query($sql);
+
+        //getting affected rows from the just executed query using 'connection-> $conn
+        $result = mysqli_affected_rows($this->conn);
+
+        return $result;
+    }
+
+    // select all users as per searching name, except current user
+    function selectUsers($name, $id, $limit, $offset)
+    {
+
+        // create array to store ALL users fetched
+        $return = array();
+
+        // // sql statement to be executed
+        // $sql = "SELECT DISTINCT
+        //             users.id, 
+        //             users.email, 
+        //             users.userName, 
+        //             users.fullName, 
+        //             users.cover, 
+        //             users.ava, 
+        //             users.bio, 
+        //             users.date_created 
+        //             FROM users 
+        //             WHERE users.id != $id AND users.fullName LIKE '%$name%' AND users.id != $id
+        //             LIMIT $limit OFFSET $offset";
+
+        // UPDATED VERSION AS PER FRIENDSHIP REQUEST
+        // $sql = "SELECT 
+        //         users.id, 
+        //         users.email, 
+        //         users.userName, 
+        //         users.fullName, 
+        //         users.ava, 
+        //         users.cover, 
+        //         users.bio, 
+        //         users.date_created, 
+        //         requests.id AS requested 
+        //         FROM users 
+        //         LEFT JOIN requests ON users.id = requests.friend_id 
+        //         WHERE users.id != $id AND users.fullName LIKE '%$name%' AND users.id != $id 
+        //         LIMIT $limit OFFSET $offset";
+
+        $sql = "SELECT 
+                users.id, 
+                users.email, 
+                users.userName, 
+                users.fullName, 
+                users.ava, 
+                users.cover, 
+                users.bio, 
+                users.date_created, 
+                requests.user_id AS request_sender, 
+                requests.friend_id AS request_receiver, 
+                friends.user_id as friendship_sender, 
+                friends.friend_id AS friendship_receiver 
+                FROM users 
+                LEFT JOIN requests ON users.id = requests.user_id OR users.id = requests.friend_id 
+                LEFT JOIN friends ON users.id = friends.user_id OR users.id = friends.friend_id 
+                WHERE users.id != $id AND users.fullName LIKE '%$name%' AND users.id != $id
+                LIMIT $limit OFFSET $offset";
+
+        // preparing sql command to be executed and then we stor ethe result of preparation in statement var.
+        $statement = $this->conn->prepare($sql);
+
+        // show error occurred while preparing the sql command for execution
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        // execute sql command
+        $statement->execute();
+
+        // retreive results from the query / sql and asigning it to $result
+        $result = $statement->get_result();
+
+        // all rows (posts) are stored in result. We are fetching every row one by one. and assigning it to $return var.
+        while ($row = $result->fetch_assoc()) {
+            $return[] = $row;
+        }
+
+        return $return;
+    }
+
+
+    function insertRequest($user_id, $friend_id)
+    {
+
+        $sql = "INSERT INTO requests SET user_id=?, friend_id=?";
+
+        $statement = $this->conn->prepare($sql);
+
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        $statement->bind_param('ii', $user_id, $friend_id);
+
+        $result = $statement->execute();
+
+        return $result;
+    }
+
+    function deleteRequest($user_id, $friend_id)
+    {
+
+        $sql = "DELETE FROM requests WHERE user_id=? AND friend_id=? 
+                OR user_id=? AND friend_id=?";
+
+        $statement = $this->conn->prepare($sql);
+
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        $statement->bind_param('iiii', $user_id, $friend_id, $friend_id, $user_id);
+
+        $result = $statement->execute();
+
+        return $result;
+    }
+
+    // selets all requests of the user ( : -> $id)
+    function selectRequests($id, $limit, $offset)
+    {
+
+        $return = array();
+
+        $sql = "SELECT 
+                    users.id, 
+                    users.email, 
+                    users.userName, 
+                    users.fullName, 
+                    users.ava, 
+                    users.cover, 
+                    users.bio, 
+                    users.date_created 
+                    FROM requests 
+                    LEFT JOIN users ON requests.user_id = users.id 
+                    WHERE requests.friend_id = $id
+                    LIMIT $limit OFFSET $offset";
+
+        $statement = $this->conn->prepare($sql);
+
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        $statement->execute();
+
+        $result = $statement->get_result();
+
+        while ($row = $result->fetch_assoc()) {
+            $return[] = $row;
+        }
+
+        return $return;
+    }
+
+    // insert friend into friends table of connectIst database
+    function insertFriend($user_id, $friend_id)
+    {
+
+        $sql = "INSERT INTO friends SET user_id=?, friend_id=?";
+
+        $statement = $this->conn->prepare($sql);
+
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        $statement->bind_param('ii', $user_id, $friend_id);
+
+        $result = $statement->execute();
+
+        return $result;
+    }
+
+    // deletes friend in the Friends table
+    function deleteFriend($user_id, $friend_id)
+    {
+
+        $sql = "DELETE FROM friends WHERE user_id=? AND friend_id=?";
+
+        $statement = $this->conn->prepare($sql);
+
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        $statement->bind_param('ii', $user_id, $friend_id);
+
+        $result = $statement->execute();
+
+        return $result;
     }
 }
