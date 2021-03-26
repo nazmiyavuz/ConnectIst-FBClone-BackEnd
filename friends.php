@@ -192,7 +192,62 @@ if (($_REQUEST['action']) == 'search') {
         $return['status'] = '400';
         $return['message'] = 'Could not delete a friend.';
     }
+    // follow user
+} else if (($_REQUEST['action']) == 'follow') {
+
+    if (!isset($_REQUEST['user_id']) || !isset($_REQUEST['friend_id'])) {
+        $return['status'] = '400';
+        $return['message'] = 'Missing required information.';
+        echo json_encode($return);
+        return;
+    }
+
+    $user_id = htmlentities($_REQUEST['user_id']);
+    $follow_id = htmlentities($_REQUEST['friend_id']);
+
+    $result = $access->insertFollow($user_id, $follow_id);
+
+    // if we got something
+    if ($result) {
+
+        $return['status'] = '200';
+        $return['message'] = 'Started following successfully.';
+
+        // nothing has been gotten
+    } else {
+
+        $return['status'] = '400';
+        $return['message'] = 'Could not follow the user.';
+    }
+    // unfollow user
+} else if (($_REQUEST['action']) == 'unfollow') {
+
+    if (!isset($_REQUEST['user_id']) || !isset($_REQUEST['friend_id'])) {
+        $return['status'] = '400';
+        $return['message'] = 'Missing required information.';
+        echo json_encode($return);
+        return;
+    }
+
+    $user_id = htmlentities($_REQUEST['user_id']);
+    $follow_id = htmlentities($_REQUEST['friend_id']);
+
+    $result = $access->deleteFollow($user_id, $follow_id);
+
+    // if we got something
+    if ($result) {
+
+        $return['status'] = '200';
+        $return['message'] = 'Stop following successfully.';
+
+        // nothing has been gotten
+    } else {
+
+        $return['status'] = '400';
+        $return['message'] = 'Could not stop following the user.';
+    }
 }
+
 
 echo json_encode($return);
 $access->disconnect();

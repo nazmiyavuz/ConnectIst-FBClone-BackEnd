@@ -83,6 +83,8 @@ if (!empty($userEmail)) {
             $return['cover'] = $user['cover'];
             $return['ava'] = $user['ava'];
             $return['bio'] = $user['bio'];
+            $return['allow_friends'] = $user['allow_friends'];
+            $return['allow_follow'] = $user['allow_follow'];
 
             // result is negative - couldn't insert
         } else {

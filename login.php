@@ -57,6 +57,8 @@ if ($user) {
         $return['cover'] = $user['cover'];
         $return['ava'] = $user['ava'];
         $return['bio'] = $user['bio'];
+        $return['allow_friends'] = $user['allow_friends'];
+        $return['allow_follow'] = $user['allow_follow'];
 
 
         // encyrpted password and salt do not match what user is entering as password

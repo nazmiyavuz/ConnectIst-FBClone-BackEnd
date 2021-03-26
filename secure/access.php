@@ -125,7 +125,7 @@ class access
     public function registertUser($email, $secured_password, $salt, $userName, $fullName)
     {
         // SQL Language - command to inser data   
-        $sql = "INSERT INTO users SET email=?, password=?, salt=?, userName=?, fullName=?";
+        $sql = "INSERT INTO users SET email=?, password=?, salt=?, userName=?, fullName=?, allow_friends=1, allow_follow=1";
 
         // preparing SQL for execution by checking the validity
         $statement = $this->conn->prepare($sql);
@@ -277,10 +277,10 @@ class access
     }
 
     // responsible of updating user related information
-    public function updateUser($email, $userName, $fullName, $id)
+    public function updateUser($email, $userName, $fullName, $allow_friends, $allow_follow, $id)
     {
         // sql statement to be ran
-        $sql = 'UPDATE users SET email=?, userName=?, fullName=? WHERE id=?';
+        $sql = 'UPDATE users SET email=?, userName=?, fullName=?, allow_friends=?, allow_follow=? WHERE id=?';
 
         // preparing SQL command for execution
         $statement = $this->conn->prepare($sql);
@@ -291,7 +291,7 @@ class access
         }
 
         // assigning values / replacing ? with the variables
-        $statement->bind_param('sssi', $email, $userName, $fullName, $id);
+        $statement->bind_param('sssiii', $email, $userName, $fullName, $allow_friends, $allow_follow, $id);
 
         // execute statement and keep the result in $result variable
         $result = $statement->execute();
@@ -634,14 +634,18 @@ class access
                 users.ava, 
                 users.cover, 
                 users.bio, 
+                users.allow_friends, 
+                users.allow_follow, 
                 users.date_created, 
                 requests.user_id AS request_sender, 
                 requests.friend_id AS request_receiver, 
                 friends.user_id as friendship_sender, 
-                friends.friend_id AS friendship_receiver 
+                friends.friend_id AS friendship_receiver, 
+                follows.follow_id AS followed_user 
                 FROM users 
                 LEFT JOIN requests ON users.id = requests.user_id OR users.id = requests.friend_id 
                 LEFT JOIN friends ON users.id = friends.user_id OR users.id = friends.friend_id 
+                LEFT JOIN follows ON users.id = follows.follow_id 
                 WHERE users.id != $id AND users.fullName LIKE '%$name%' AND users.id != $id
                 LIMIT $limit OFFSET $offset";
 
@@ -719,9 +723,13 @@ class access
                     users.ava, 
                     users.cover, 
                     users.bio, 
+                    users.allow_friends, 
+                    users.allow_follow, 
+                    follows.follow_id AS followed_user, 
                     users.date_created 
                     FROM requests 
                     LEFT JOIN users ON requests.user_id = users.id 
+                    LEFT JOIN follows ON requests.user_id = follows.follow_id 
                     WHERE requests.friend_id = $id
                     LIMIT $limit OFFSET $offset";
 
@@ -774,6 +782,44 @@ class access
         }
 
         $statement->bind_param('ii', $user_id, $friend_id);
+
+        $result = $statement->execute();
+
+        return $result;
+    }
+
+    // inserts data into Follows DB
+    function insertFollow($user_id, $follow_id)
+    {
+
+        $sql = "INSERT INTO follows SET user_id=?, follow_id=?";
+
+        $statement = $this->conn->prepare($sql);
+
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        $statement->bind_param('ii', $user_id, $follow_id);
+
+        $result = $statement->execute();
+
+        return $result;
+    }
+
+    // deletes data into Follows DB
+    function deleteFollow($user_id, $follow_id)
+    {
+
+        $sql = "DELETE FROM follows WHERE user_id=? AND follow_id=?";
+
+        $statement = $this->conn->prepare($sql);
+
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        $statement->bind_param('ii', $user_id, $follow_id);
 
         $result = $statement->execute();
 
