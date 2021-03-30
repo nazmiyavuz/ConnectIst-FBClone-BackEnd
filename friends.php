@@ -246,6 +246,31 @@ if (($_REQUEST['action']) == 'search') {
         $return['status'] = '400';
         $return['message'] = 'Could not stop following the user.';
     }
+
+    // sceneario for selecting all recommended users
+} else if (($_REQUEST['action']) == 'recommended') {
+
+    // checking if the values have been passed or not to current php file
+    if (!isset($_REQUEST['id'])) {
+        $return['status'] = '400';
+        $return['message'] = 'Missing required information.';
+        echo json_encode($return);
+        return;
+    }
+
+    // secured way of receiving values
+    $id = htmlentities($_REQUEST['id']);
+
+    $users = $access->selectRecommendedFriends($id);
+    if ($users) {
+
+        // $return['users'] = $users;
+        $return = $users;
+    } else {
+
+        $return['status'] = '400';
+        $return['message'] = 'No recommended friends were found.';
+    }
 }
 
 

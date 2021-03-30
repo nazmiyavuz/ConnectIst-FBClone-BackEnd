@@ -626,7 +626,30 @@ class access
         //         WHERE users.id != $id AND users.fullName LIKE '%$name%' AND users.id != $id 
         //         LIMIT $limit OFFSET $offset";
 
-        $sql = "SELECT 
+        // $sql = "SELECT DISTINCT 
+        //         users.id, 
+        //         users.email, 
+        //         users.userName, 
+        //         users.fullName, 
+        //         users.ava, 
+        //         users.cover, 
+        //         users.bio, 
+        //         users.allow_friends, 
+        //         users.allow_follow, 
+        //         users.date_created, 
+        //         requests.user_id AS request_sender, 
+        //         requests.friend_id AS request_receiver, 
+        //         friends.user_id as friendship_sender, 
+        //         friends.friend_id AS friendship_receiver, 
+        //         follows.follow_id AS followed_user 
+        //         FROM users 
+        //         LEFT JOIN requests ON users.id = requests.user_id OR users.id = requests.friend_id 
+        //         LEFT JOIN friends ON users.id = friends.user_id OR users.id = friends.friend_id 
+        //         LEFT JOIN follows ON users.id = follows.follow_id 
+        //         WHERE users.id != $id AND users.fullName LIKE '%$name%' AND users.id != $id
+        //         LIMIT $limit OFFSET $offset";
+
+        $sql = "SELECT DISTINCT 
                 users.id, 
                 users.email, 
                 users.userName, 
@@ -643,9 +666,9 @@ class access
                 friends.friend_id AS friendship_receiver, 
                 follows.follow_id AS followed_user 
                 FROM users 
-                LEFT JOIN requests ON users.id = requests.user_id OR users.id = requests.friend_id 
-                LEFT JOIN friends ON users.id = friends.user_id OR users.id = friends.friend_id 
-                LEFT JOIN follows ON users.id = follows.follow_id 
+                LEFT JOIN requests ON users.id = requests.user_id AND requests.friend_id = $id OR users.id = requests.friend_id AND requests.user_id = $id
+                LEFT JOIN friends ON users.id = friends.user_id AND friends.friend_id = $id OR users.id = friends.friend_id AND friends.user_id = $id
+                LEFT JOIN follows ON users.id = follows.follow_id AND follows.user_id = $id OR users.id = follows.user_id AND follows.follow_id = $id
                 WHERE users.id != $id AND users.fullName LIKE '%$name%' AND users.id != $id
                 LIMIT $limit OFFSET $offset";
 
@@ -824,5 +847,76 @@ class access
         $result = $statement->execute();
 
         return $result;
+    }
+
+    // insert details about the complaint
+    function insertReport($post_id, $user_id, $reason, $byUser_id)
+    {
+
+        $sql = "INSERT INTO reports SET post_id=?, user_id=?, reason=?, byUser_id=?";
+
+        $statement = $this->conn->prepare($sql);
+
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        $statement->bind_param('iisi', $post_id, $user_id, $reason, $byUser_id);
+
+        $result = $statement->execute();
+
+        return $result;
+    }
+
+    // will select friends of our friends which are recommended fro the friendship
+    public function selectRecommendedFriends($id)
+    {
+
+        $sql = "SELECT DISTINCT 
+				users.id, 
+                users.fullName, 
+                users.email, 
+                users.ava, 
+                users.cover, 
+                users.bio, 
+                users.allow_friends, 
+                users.allow_follow, 
+                requests.user_id AS request_sender, 
+                requests.friend_id AS request_receiver 
+                FROM friends 
+                JOIN users ON friends.user_id = users.id AND friends.friend_id IN 
+                (SELECT users.id FROM friends LEFT JOIN users ON (users.id = friends.user_id AND friends.friend_id = $id OR users.id = friends.friend_id AND friends.user_id = $id) WHERE friends.friend_id = $id OR friends.user_id = $id) 
+                OR friends.friend_id = users.id AND friends.user_id IN 
+                (SELECT users.id FROM friends LEFT JOIN users ON (users.id = friends.user_id AND friends.friend_id = $id OR users.id = friends.friend_id AND friends.user_id = $id) WHERE friends.friend_id = $id OR friends.user_id = $id) 
+                LEFT JOIN requests ON users.id = requests.user_id AND requests.friend_id = $id OR users.id = requests.friend_id AND requests.user_id = $id 
+                WHERE friends.user_id != $id
+                AND friends.friend_id != $id 
+                AND users.allow_friends = 1
+                AND requests.user_id IS NULL
+                LIMIT 20";
+
+        // preparing sql command to be executed and then we stor ethe result of preparation in statement var.
+        $statement = $this->conn->prepare($sql);
+
+        // show error occurred while preparing the sql command for execution
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        // execute sql command
+        $statement->execute();
+
+        // retreive results from the query / sql and asigning it to $result
+        $result = $statement->get_result();
+
+        // create array to store ALL users fetched
+        $users = array();
+
+        // all rows (posts) are stored in result. We are fetching every row one by one. and assigning it to $return var.
+        while ($row = $result->fetch_assoc()) {
+            $users[] = $row;
+        }
+
+        return $users;
     }
 }
