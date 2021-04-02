@@ -792,6 +792,7 @@ class access
         return $result;
     }
 
+    // SECTION Friends
     // deletes friend in the Friends table
     function deleteFriend($user_id, $friend_id)
     {
@@ -918,5 +919,219 @@ class access
         }
 
         return $users;
+    }
+
+
+    // SECTION Notification
+    public function insertNotification($byUser_id, $user_id, $type)
+    {
+
+        // sql command for exec
+        $sql = 'INSERT INTO notifications SET byUser_id=?, user_id=?, type=?';
+
+        // preparing for exec
+        $statement = $this->conn->prepare($sql);
+
+        // checking for errors
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        // replacing ? with var
+        $statement->bind_param('iis', $byUser_id, $user_id, $type);
+
+        // executing command
+        $result = $statement->execute();
+
+        // returning the result
+        return $result;
+    }
+
+    function deleteNotification($byUser_id, $user_id, $type)
+    {
+
+        // sql command for exec
+        $sql = 'DELETE FROM notifications WHERE byUser_id=? AND user_id=? AND type=?';
+
+        // preparing for exec
+        $statement = $this->conn->prepare($sql);
+
+        // checking for erros
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        // replacing ? with var
+        $statement->bind_param('iis', $byUser_id, $user_id, $type);
+
+        // executing command
+        $result = $statement->execute();
+
+        // returning the result
+        return $result;
+    }
+
+    function selectNotifications($id, $limit, $offset)
+    {
+
+        $sql = "SELECT 
+                notifications.id,
+                notifications.byUser_id, 
+				notifications.user_id, 
+                notifications.type, 
+                notifications.viewed, 
+                notifications.date_created, 
+                users.fullName, 
+                users.email, 
+                users.ava, 
+                users.cover, 
+                users.bio 
+                FROM notifications 
+                JOIN users ON users.id = notifications.byUser_id 
+                WHERE notifications.user_id = $id AND (notifications.viewed IS NULL OR notifications.viewed != 'ignore') 
+                ORDER BY notifications.date_created DESC 
+                LIMIT $limit OFFSET $offset";
+
+        // preparing sql for exec
+        $statement = $this->conn->prepare($sql);
+        // checking for errors
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+        // exec-ing
+        $statement->execute();
+        // getting all results
+        $result = $statement->get_result();
+        // new array to store notifications
+        $notifications = array();
+        // appending each row 1 by 1 to $notifications var
+        while ($row = $result->fetch_assoc()) {
+            $notifications[] = $row;
+        }
+        // returning array
+        return $notifications;
+    }
+
+
+    function updateNotification($viewed, $id)
+    {
+
+        $sql = "UPDATE notifications SET viewed=? WHERE id=?";
+
+        // preparing for exec
+        $statement = $this->conn->prepare($sql);
+
+        // checking for erros
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+
+        // replacing ? with var
+        $statement->bind_param('si', $viewed, $id);
+
+        // executing command
+        $result = $statement->execute();
+
+        // returning the result
+        return $result;
+    }
+
+    function selectFriends($id, $limit, $offset)
+    {
+
+        $sql = "SELECT DISTINCT
+                friends.id,
+                friends.user_id,
+                friends.friend_id,
+                friends.date_created,
+                users.email,
+                users.fullName,
+                users.ava,
+                users.cover,
+                users.bio, 
+                users.allow_friends, 
+                users.allow_follow
+                FROM friends
+                LEFT JOIN users ON friends.user_id = users.id AND friends.user_id != $id OR friends.friend_id = users.id AND friends.friend_id != $id
+                WHERE friends.user_id = $id OR friends.friend_id = $id
+                ORDER BY friends.date_created DESC
+                LIMIT $limit OFFSET $offset";
+
+        // preparing sql for exec
+        $statement = $this->conn->prepare($sql);
+        // checking for errors
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+        // exec-ing
+        $statement->execute();
+        // getting all results
+        $result = $statement->get_result();
+        // new array to store friends
+        $friends = array();
+        // appending each row 1 by 1 to $friends var
+        while ($row = $result->fetch_assoc()) {
+            $friends[] = $row;
+        }
+        // returning array
+        return $friends;
+    }
+
+    // SECTION Feed
+    function selectPostsForFeed($id, $offset, $limit)
+    {
+
+        $sql = "SELECT DISTINCT
+		posts.id,
+        posts.user_id,
+        posts.text,
+        posts.picture,
+        posts.date_created,
+        users.email,
+        users.fullName,
+        users.ava,
+        users.cover,
+        users.bio,
+        likes.post_id AS liked
+        
+        FROM posts
+        
+        LEFT JOIN users ON posts.user_id = users.id
+        LEFT JOIN follows ON posts.user_id = follows.user_id OR posts.user_id = follows.follow_id
+        LEFT JOIN likes ON posts.id = likes.post_id
+        
+        WHERE posts.user_id IN 
+        
+        (SELECT users.id FROM friends LEFT JOIN users ON (users.id = friends.user_id AND friends.friend_id = $id
+         OR users.id = friends.friend_id AND friends.user_id = $id) WHERE friends.user_id = $id OR friends.friend_id = $id)
+         
+         OR posts.user_id IN 
+         
+        (SELECT users.id FROM follows LEFT JOIN users ON (users.id = follows.user_id AND follows.follow_id = $id 
+        OR users.id = follows.follow_id AND follows.user_id = $id) WHERE follows.user_id = $id OR follows.follow_id = $id)
+
+        OR posts.user_id = $id
+
+        ORDER BY posts.date_created DESC
+        LIMIT $limit OFFSET $offset";
+
+        // preparing sql for exec
+        $statement = $this->conn->prepare($sql);
+        // checking for errors
+        if (!$statement) {
+            throw new Exception($statement->error);
+        }
+        // exec-ing
+        $statement->execute();
+        // getting all results
+        $result = $statement->get_result();
+        // new array to store items
+        $return = array();
+        // appending each row 1 by 1 to $return var
+        while ($row = $result->fetch_assoc()) {
+            $return[] = $row;
+        }
+        // returning array
+        return $return;
     }
 }

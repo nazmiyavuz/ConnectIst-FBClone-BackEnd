@@ -271,6 +271,30 @@ if (($_REQUEST['action']) == 'search') {
         $return['status'] = '400';
         $return['message'] = 'No recommended friends were found.';
     }
+} else if (($_REQUEST['action']) == 'friends') {
+
+    // checking if the values have been passed or not to current php file
+    if (!isset($_REQUEST['id']) || !isset($_REQUEST['limit']) || !isset($_REQUEST['offset'])) {
+        $return['status'] = '400';
+        $return['message'] = 'Missing required information.';
+        echo json_encode($return);
+        return;
+    }
+    // secured way of receiving values
+    $id = htmlentities($_REQUEST['id']);
+    $limit = htmlentities($_REQUEST['limit']);
+    $offset = htmlentities($_REQUEST['offset']);
+    // assign all selected notifications to $notifications var
+    $friends = $access->selectFriends($id, $limit, $offset);
+    // selected
+    if ($friends) {
+        // $return['notifications'] = $notifications;
+        $return = $friends;
+        // could not select
+    } else {
+        $return['status'] = '400';
+        $return['message'] = 'No friends have been found.';
+    }
 }
 
 

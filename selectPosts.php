@@ -33,10 +33,14 @@ require("secure/access.php");
 $access = new access($dbhost, $dbuser, $dbpass, $dbname);
 $access->connect();
 
-
-
 // STEP 3. Select posts from the server
-$posts = $access->selectPosts($id, $offset, $limit);
+// If action is set already and is equal to FEED, then exec-te the function to load the feed, or load the normal posts of the user
+if (isset($_REQUEST['action']) && $_REQUEST['action'] == 'feed') {
+    $posts = $access->selectPostsForFeed($id, $offset, $limit);
+} else {
+    $posts = $access->selectPosts($id, $offset, $limit);
+}
+
 
 // found posts / could not found
 if ($posts) {
